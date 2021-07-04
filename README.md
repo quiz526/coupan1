@@ -696,20 +696,38 @@ kubectl get all -n coupan
 
 ## 서킷 브레이킹(Circuit Breaking)
 
-* 서킷 브레이킹 : istio방식으로 Circuit breaking 구현함
+* 서킷 브레이킹 프레임워크의 선택 :  Spring FeignClient + Hystrix 사용하여 Circuit breaking 구현함
+- 시나리오 : 쿠폰 구매 시, order → coupon 에서 req/res 로 구현되어 있어, 구매가 과도한 요청으로 지연이 발생하는 경우 CirCuit Breaker 통해 장애격리한다.
 
-시나리오는 차량등록시 요청이 과도할 경우 CB 를 통하여 장애격리.
+- Hystrix 설정: : 요청처리 시간이 300 밀리세컨이 초과할 경우 Circuit breaker 가 동작하여 처리하도록 적용
+- 피호출되는 coupon 서비스에 sleep을 설정해 타임아웃 시간에 걸리도록 설정한다.
 
-outlierDetection 를 설정: 1초내에 연속 한번 오류발생시, 호스트를 10초동안 100% CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
+# order 서비스 > application.yaml
+```
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 300
 
 ```
-# dr-htttpbin.yaml
 
-outlierDetection:
-        consecutive5xxErrors: 1
-        interval: 1s
-        baseEjectionTime: 10s
-        maxEjectionPercent: 100
+# coupon 서비스 로직에 sleep 추가 
+```
+    @PreUpdate
+    public void onPreUpdate(){
+        StockModified stockModified = new StockModified();
+        BeanUtils.copyProperties(this, stockModified);
+        stockModified.publishAfterCommit();
+
+        try {
+            Thread.currentThread().sleep((long) (200 + Math.random() * 110));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
 ```
 
