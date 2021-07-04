@@ -1,7 +1,6 @@
-# 쿠폰판매 사이트
+# 쿠폰판매 사이트[쿠판]
 
 ![image](https://user-images.githubusercontent.com/84000890/124267649-80967c80-db73-11eb-9e1c-748e37af6e45.png)
-# 쿠판 
 
 본 프로젝트는 MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 프로젝트입니다.
 이는 클라우드 네이티브 애플리케이션의 개발에 요구되는 체크포인트들을 통과하기 위한 내용을 포함합니다.
@@ -655,16 +654,16 @@ cd coupon
 az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/coupon:v1 .
 
 cd customercenter
-az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/customercenter:v1 .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/customercenter:v2 .
 
 cd gateway
-az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/gateway:v1 .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/gateway:v2 .
 
 cd order
-az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/order:v1 .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/order:v2 .
 
 cd pay
-az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/pay:v1 .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/pay:v2 .
 ```
 
 ![image](https://user-images.githubusercontent.com/84000890/124377531-4bab3680-dce7-11eb-9aa7-8f57be20a037.png)
@@ -672,45 +671,27 @@ az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/pay:v1 .
 
 - 컨테이너라이징(Containerizing) : Deployment 생성
 ```
-cd coupon
-kubectl apply -f kubernetes/deployment.yml
-
-cd customercenter
-kubectl apply -f kubernetes/deployment.yml
-
-cd gateway
-kubectl apply -f kubernetes/deployment.yml
-
-cd order
-kubectl apply -f kubernetes/deployment.yml
-
-cd pay
-kubectl create deploy gateway --image=user05skccacr.azurecr.io/gateway:latest
+kubectl create deploy coupon --image=quiz526skacr.azurecr.io/coupon:v1 -n coupan
+kubectl create deploy customercenter --image=quiz526skacr.azurecr.io/customercenter:v2 -n coupan
+kubectl create deploy gateway --image=quiz526skacr.azurecr.io/gateway:v2 -n coupan
+kubectl create deploy order --image=quiz526skacr.azurecr.io/order:v2 -n coupan
+kubectl create deploy pay --image=quiz526skacr.azurecr.io/pay:v2 -n coupan
 
 kubectl get all
 ```
 
 - 컨테이너라이징(Containerizing) : Service 생성 확인
 ```
-cd coupon
-kubectl apply -f kubernetes/service.yaml
+kubectl expose deploy coupon --type="ClusterIP" --port=8080 -n coupan
+kubectl expose deploy customercenter --type="ClusterIP" --port=8080 -n coupan
+kubectl expose deploy gateway --type=LoadBalancer --port=8080 -n coupan
+kubectl expose deploy order --type="ClusterIP" --port=8080 -n coupan
+kubectl expose deploy pay --type="ClusterIP" --port=8080 -n coupan
 
-cd customercenter
-kubectl apply -f kubernetes/service.yaml
-
-cd gateway
-kubectl apply -f kubernetes/service.yaml
-
-cd order
-kubectl apply -f kubernetes/service.yaml
-
-cd pay
-kubectl expose deploy gateway --type=LoadBalancer --port=8080
-
-kubectl get all
+kubectl get all -n coupan
 ```
 
-![image](https://user-images.githubusercontent.com/84000863/122323130-9136d800-cf61-11eb-9dd6-edb2f60952c4.png)
+![image](https://user-images.githubusercontent.com/84000890/124377786-c3c62c00-dce8-11eb-87e2-22b131ef54cb.png)
 
 
 ## 서킷 브레이킹(Circuit Breaking)
