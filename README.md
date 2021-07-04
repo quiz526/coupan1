@@ -624,11 +624,10 @@ http POST http://localhost:8088/orders couponId=2 customerId=4 amt=18000 qty=1 o
 
 ## Deploy / Pipeline
 
-- 소스 가져오기 [이미지 및 경로 : 수정] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+- 소스 가져오기
 ```
-git clone https://github.com/kary000/car.git
+git clone https://github.com/quiz526/coupan.git
 ```
-![image](https://user-images.githubusercontent.com/84000863/122197088-cea05480-ced2-11eb-8a64-9c2d55b41240.png)
 
 - 빌드하기
 ```
@@ -647,43 +646,45 @@ mvn package
 cd pay
 mvn package
 ```
-[수정 :  이미지 } !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-![image](https://user-images.githubusercontent.com/84000863/122197418-1de68500-ced3-11eb-8b10-7820e8a354b8.png)
+↓ sample : pay 
+![image](https://user-images.githubusercontent.com/84000890/124375978-b8bace00-dcdf-11eb-9dcb-28b631ab20ae.png)
 
 - 도커라이징(Dockerizing) : Azure Container Registry(ACR)에 Docker Image Push하기
 ```
-cd booking
-az acr build --registry user05skccacr --image user05skccacr.azurecr.io/booking:latest .
+cd coupon
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/coupon:v1 .
 
 cd customercenter
-az acr build --registry user05skccacr --image user05skccacr.azurecr.io/customercenter:latest .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/customercenter:v1 .
 
 cd gateway
-az acr build --registry user05skccacr --image user05skccacr.azurecr.io/gateway:latest .
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/gateway:v1 .
 
-cd product
-az acr build --registry user05skccacr --image user05skccacr.azurecr.io/product:latest .
+cd order
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/order:v1 .
 
-cd store
-az acr build --registry user05skccacr --image user05skccacr.azurecr.io/store:latest . 
+cd pay
+az acr build --registry quiz526skacr --image quiz526skacr.azurecr.io/pay:v1 .
 ```
-![image](https://user-images.githubusercontent.com/84000863/122322876-22597f00-cf61-11eb-90ff-bb7b26b1c21f.png)
+
+![image](https://user-images.githubusercontent.com/84000890/124377531-4bab3680-dce7-11eb-9aa7-8f57be20a037.png)
+
 
 - 컨테이너라이징(Containerizing) : Deployment 생성
 ```
-cd product
-kubectl apply -f kubernetes/deployment.yml
-
-cd booking
-kubectl apply -f kubernetes/deployment.yml
-
-cd store
+cd coupon
 kubectl apply -f kubernetes/deployment.yml
 
 cd customercenter
 kubectl apply -f kubernetes/deployment.yml
 
 cd gateway
+kubectl apply -f kubernetes/deployment.yml
+
+cd order
+kubectl apply -f kubernetes/deployment.yml
+
+cd pay
 kubectl create deploy gateway --image=user05skccacr.azurecr.io/gateway:latest
 
 kubectl get all
@@ -691,19 +692,19 @@ kubectl get all
 
 - 컨테이너라이징(Containerizing) : Service 생성 확인
 ```
-cd product
-kubectl apply -f kubernetes/service.yaml
-
-cd booking
-kubectl apply -f kubernetes/service.yaml
-
-cd store
+cd coupon
 kubectl apply -f kubernetes/service.yaml
 
 cd customercenter
 kubectl apply -f kubernetes/service.yaml
 
 cd gateway
+kubectl apply -f kubernetes/service.yaml
+
+cd order
+kubectl apply -f kubernetes/service.yaml
+
+cd pay
 kubectl expose deploy gateway --type=LoadBalancer --port=8080
 
 kubectl get all
