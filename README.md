@@ -702,7 +702,7 @@ kubectl get all -n coupan
 - Hystrix 설정: : 요청처리 시간이 300 밀리세컨이 초과할 경우 Circuit breaker 가 동작하여 처리하도록 적용
 - 피호출되는 coupon 서비스에 sleep을 설정해 타임아웃 시간에 걸리도록 설정한다.
 
-# order 서비스 > application.yaml
+- order 서비스 > application.yaml
 ```
 feign:
   hystrix:
@@ -715,7 +715,7 @@ hystrix:
 
 ```
 
-# coupon 서비스 로직에 sleep 추가 
+- coupon 서비스 로직에 sleep 추가 
 ```
     @PreUpdate
     public void onPreUpdate(){
@@ -736,36 +736,34 @@ hystrix:
 - 30초 동안 실시
 
 ```
-$ siege -c100 -t30S -v --content-type "application/json" 'http://52.231.76.211:8080/products POST {"productId": "1001", "stock":"50", "name":"IONIQ"}'
+$ siege -c100 -t30S -v --content-type "application/json" -r10 -v --content-type "application/json" 'http://order:8080/orders POST {"couponId":"1", "customerId":"2", "qty":"1", "amt":"30000", "status":"ordered"}'
 ```
 
 앞서 설정한 부하가 발생하여 Circuit Breaker가 발동, 초반에는 요청 실패처리되었으며
-밀린 부하가 product에서 처리되면서 다시 요청을 받기 시작함
+밀린 부하가 처리되면서 다시 요청을 받기 시작함
 
-- Availability 가 높아진 것을 확인 (siege)
+- Availability 가 높아진 것을 확인 (siege) [수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122497960-454f6600-d029-11eb-9a72-09992ab1baba.png)
 
-- 모니터링 시스템(Kiali) : EXTERNAL-IP:20001 에서 Circuit Breaker 뱃지 발생 확인함.
-
-![image](https://user-images.githubusercontent.com/84000863/122333368-01018e80-cf73-11eb-94c9-c99368bb6636.png)
 
 
 ### Autoscale (HPA)
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
 
 
-- 상품(product) 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 1프로를 넘어서면 replica 를 10개까지 늘려준다:
+- 쿠폰 구매(order) 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 1프로를 넘어서면 replica 를 10개까지 늘려준다:
 ```
-kubectl autoscale deploy product --min=1 --max=10 --cpu-percent=1
+kubectl autoscale deploy order --min=1 --max=10 --cpu-percent=1
 
 kubectl get hpa
 ```
+[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ![image](https://user-images.githubusercontent.com/84000863/122494497-71b4b380-d024-11eb-948d-97ef4a8628ae.png)
 
 - CB 에서 했던 방식대로 워크로드를 30초 동안 걸어준다.
 ```
-siege -c100 -t30S -v --content-type "application/json" 'http://52.231.76.211:8080/products POST {"productId": "1001", "stock":"50", "name":"IONIQ"}'
+$ siege -c100 -t30S -v --content-type "application/json" -r10 -v --content-type "application/json" 'http://order:8080/orders POST {"couponId":"1", "customerId":"2", "qty":"1", "amt":"30000", "status":"ordered"}'
 ```
 
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다:
@@ -774,11 +772,11 @@ watch -n 1 kubectl get pod
 ```
 
 - 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
-
+[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ![image](https://user-images.githubusercontent.com/84000863/122336985-a1a67d00-cf78-11eb-8be9-d1700f67ceb2.png)
 
 
-- siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. 
+- siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. [수정 : & percent 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   (동일 워크로드 CB 대비 2.70% -> 84.10% 성공률 향상)
 
 ![image](https://user-images.githubusercontent.com/84000863/122337016-ad923f00-cf78-11eb-86b9-c3a6e08373a0.png)
@@ -790,13 +788,13 @@ watch -n 1 kubectl get pod
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
-siege -c10 -t360S -v --content-type "application/json" 'http://20.41.96.68:8080/products POST {"productId": "1001", "stock":"50", "name":"IONIQ"}'
+$ siege -c10 -t60S -v --content-type "application/json" -r10 -v --content-type "application/json" 'http://order:8080/orders POST {"couponId":"1", "customerId":"2", "qty":"1", "amt":"30000", "status":"ordered"}'
 ```
 - Readiness가 설정되지 않은 yml 파일로 배포 중 버전1에서 버전2로 업그레이드 시 서비스 요청 처리 실패
 ```
-kubectl set image deploy product user05skccacr.azurecr.io/product:v2
+kubectl set image deploy order quiz526skacr.azurecr.io/order:v2
 ```
-
+[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ![image](https://user-images.githubusercontent.com/84000863/122378900-53f23a80-cfa1-11eb-81ab-2c8b60a8a79b.png)
 
 - deployment.yml에 readiness 옵션을 추가
@@ -810,18 +808,18 @@ kubectl set image deploy product user05skccacr.azurecr.io/product:v2
    failureThreshold: 5          
 ```
 
-- readiness 옵션을 배포 옵션을 설정 한 경우 Availability가 배포기간 동안 변화가 없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
+- readiness 옵션을 배포 옵션을 설정 한 경우 Availability가 배포기간 동안 변화가 없기 때문에 무정지 재배포가 성공한 것으로 확인됨.[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122379442-d418a000-cfa1-11eb-8b67-fad7b18e64b1.png)
 
-- 기존 버전과 새 버전의 product pod 공존 중
+- 기존 버전과 새 버전의 product pod 공존 중[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122379354-c06d3980-cfa1-11eb-97cc-2e28e1902117.png)
 
 
 ## ConfigMap
 
-- Booking 서비스의 deployment.yml 파일에 아래 항목 추가
+- order 서비스의 deployment.yml 파일에 아래 항목 추가
 ```
 env:
    - name: STATUS
@@ -831,19 +829,20 @@ env:
          key: status
 ```
 
-- Booking 서비스에 configMap 설정 데이터 가져오도록 아래 항목 추가
+- order 서비스에 configMap 설정 데이터 가져오도록 아래 항목 추가[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122492593-04ebea00-d021-11eb-8000-9e6b55d75ffb.png)
 
-- ConfigMap 생성 및 조회
+- ConfigMap 생성 및 조회[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 ```
-kubectl create configmap storecm --from-literal=status=Booked
+kubectl create configmap storecm --from-literal=status=Ordered
 kubectl get configmap storecm -o yaml
 ```
 
 ![image](https://user-images.githubusercontent.com/84000863/122506477-6455f400-d039-11eb-93b2-2145d21f8e36.png)
 
-- ConfigMap 설정 데이터 조회
+- ConfigMap 설정 데이터 조회[수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122492475-c5bd9900-d020-11eb-9131-16619f8324ab.png)
 
@@ -851,14 +850,14 @@ kubectl get configmap storecm -o yaml
 
 ## Self-Healing (Liveness Probe)
 
-- 상품(product) 서비스의 deployment.yaml에 liveness probe 옵션 추가
+- 구매(order) 서비스의 deployment.yaml에 liveness probe 옵션 추가 [수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122364364-a842ed80-cf94-11eb-8a45-980901aeaf3b.png)
  
-- product에 liveness 적용 확인
+- order에 liveness 적용 확인 [수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122364275-95301d80-cf94-11eb-9312-7bbcab0a00d8.png)
 
-- product 서비스에 liveness가 발동되었고, 포트에 응답이 없기에 Restart가 발생함
+- order 서비스에 liveness가 발동되었고, 포트에 응답이 없기에 Restart가 발생함 [수정 : 이미지]!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ![image](https://user-images.githubusercontent.com/84000863/122365346-8d24ad80-cf95-11eb-855a-e8e724d273f6.png)
